@@ -2,9 +2,9 @@ name: Build CI
 
 on:
   push:
-    branches: ["dev"]
+    branches: [nosym"]
   pull_request:
-    branches: ["dev"]
+    branches: ["nosym"]
 
 jobs:
   Build-kpimg:
