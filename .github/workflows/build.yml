@@ -2,7 +2,7 @@ name: Build CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["dev"]
     paths:
       - ".github/workflows/build.yml"
       - "kernel/**"
@@ -10,7 +10,7 @@ on:
       - "tools/**"
       - "version"
   pull_request:
-    branches: ["main"]
+    branches: ["dev"]
     paths:
       - ".github/workflows/build.yml"
       - "kernel/**"
