@@ -23,8 +23,7 @@
 #include "kallsym.h"
 #include "patch.h"
 #include "common.h"
-
-#define KPM_MAX_NUM 16
+#include "kpm.h"
 
 uint32_t version = 0;
 const char *program_name = NULL;
@@ -44,7 +43,9 @@ void print_usage(char **argv)
         "  -u, --unpatch                Unpatch patched kernel image(-i).\n"
         "  -r, --resetkey               Reset superkey of patched image(-i).\n"
         "  -d, --dump                   Dump kallsyms infomations of kernel image(-i).\n"
-        "  -l, --list-kpm               List all embeded KPM of patched kernel image. Print KPM informations if -M specified.\n"
+        "  -l, --list                   Print all patch informations of kernel image if -i specified.\n"
+        "                               Print KPM informations if -M specified.\n"
+        "                               Print KernelPatch image informations if -k specified.\n"
 
         "Options:\n"
         "  -i, --image PATH             Kernel image path.\n"
@@ -70,7 +71,7 @@ int main(int argc, char *argv[])
                                  { "unpatch", no_argument, NULL, 'u' },
                                  { "resetkey", no_argument, NULL, 'r' },
                                  { "dump", no_argument, NULL, 'd' },
-                                 { "list-kpm", no_argument, NULL, 'l' },
+                                 { "list", no_argument, NULL, 'l' },
 
                                  { "image", required_argument, NULL, 'i' },
                                  { "kpimg", required_argument, NULL, 'k' },
@@ -81,17 +82,20 @@ int main(int argc, char *argv[])
                                  { "detach-kpm", required_argument, NULL, 'D' },
                                  { "kpm", required_argument, NULL, 'M' },
                                  { 0, 0, 0, 0 } };
-    char *optstr = "hvpurdi:s:k:o:";
+    char *optstr = "hvpurdli:s:k:o:E:D:M:";
 
     char *kimg_path = NULL;
     char *kpimg_path = NULL;
     char *out_path = NULL;
     char *superkey = NULL;
 
-    int kpm_num = 0;
-    char *embed_kpms_path[KPM_MAX_NUM] = { '\0' };
-    char *embed_kpms_name[KPM_MAX_NUM] = { '\0' };
-    char *kpm_path = NULL;
+    int embed_kpm_num = 0;
+    char *embed_kpms_path[KPM_MAX_NUM] = { 0 };
+
+    int detach_kpm_num = 0;
+    char *detach_kpms_name[KPM_MAX_NUM] = { 0 };
+
+    char *alone_kpm_path = NULL;
 
     char cmd = '\0';
     int opt = -1;
@@ -121,10 +125,13 @@ int main(int argc, char *argv[])
             out_path = optarg;
             break;
         case 'E':
+            embed_kpms_path[embed_kpm_num++] = optarg;
             break;
         case 'D':
+            detach_kpms_name[detach_kpm_num++] = optarg;
             break;
         case 'M':
+            alone_kpm_path = optarg;
             break;
         default:
             break;
@@ -140,14 +147,21 @@ int main(int argc, char *argv[])
         else
             fprintf(stdout, "%x\n", version);
     } else if (cmd == 'p') {
-        ret = patch_img(kimg_path, kpimg_path, out_path, superkey);
+        ret = patch_update_img(kimg_path, kpimg_path, out_path, superkey, embed_kpms_path, embed_kpm_num,
+                               detach_kpms_name, detach_kpm_num);
     } else if (cmd == 'd') {
         ret = dump_kallsym(kimg_path);
     } else if (cmd == 'u') {
         ret = unpatch_img(kimg_path, out_path);
     } else if (cmd == 'r') {
         ret = reset_key(kimg_path, out_path, superkey);
-    } else {
+    } else if (cmd == 'l') {
+        if (kimg_path) print_patched_image_info(kimg_path);
+        if (alone_kpm_path) print_kpm_info_path(alone_kpm_path);
+        if (kpimg_path) print_kp_image_info(kpimg_path);
+    }
+
+    else {
         print_usage(argv);
     }
     return ret;

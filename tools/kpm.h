@@ -3,6 +3,9 @@
  * Copyright (C) 2024 bmax121. All Rights Reserved.
  */
 
+#ifndef _KP_TOOL_KPM_H_
+#define _KP_TOOL_KPM_H_
+
 #define Elf_Shdr Elf64_Shdr
 #define Elf_Phdr Elf64_Phdr
 #define Elf_Sym Elf64_Sym
@@ -39,3 +42,9 @@ struct load_info
         unsigned int sym, str, mod, info;
     } index;
 };
+
+int get_kpm_info(const char *kpm, int len, char *out_info, int size);
+
+void print_kpm_info_path(const char *kpm_path);
+
+#endif
