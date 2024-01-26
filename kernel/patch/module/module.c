@@ -420,7 +420,7 @@ static int elf_header_check(struct load_info *info)
 struct module modules = { 0 };
 static spinlock_t module_lock;
 
-int load_module(void *data, int len, const char *args, void *__user reserved)
+int load_module(const void *data, int len, const char *args, void *__user reserved)
 {
     struct load_info load_info = { .len = len, .hdr = data };
     struct load_info *info = &load_info;
@@ -472,11 +472,11 @@ int load_module(void *data, int len, const char *args, void *__user reserved)
     err = (*mod->init)(mod->args, reserved);
 
     if (!err) {
-        logki("module: [%s] init succeed\n", mod->info.name);
+        logkfi("[%s] succeed with [%s] \n", mod->info.name, args);
         list_add_tail(&mod->list, &modules.list);
         goto out;
     } else {
-        logki("module: [%s] init failed: %d, try exit ...\n", mod->info.name, err);
+        logkfi("[%s] failed with [%s] error: %d, try exit ...\n", mod->info.name, args, err);
         (*mod->exit)(reserved);
     }
 
@@ -494,6 +494,8 @@ out:
 // lock
 int unload_module(const char *name, void *__user reserved)
 {
+    logkfe("name: %s\n", name);
+
     rcu_read_lock();
     int err = 0;
 
@@ -511,6 +513,8 @@ int unload_module(const char *name, void *__user reserved)
     kp_free_exec(mod->start);
     kvfree(mod);
 
+    logkfi("name: %s, rc: %d\n", name, err);
+
 out:
     rcu_read_unlock();
     return err;
@@ -520,7 +524,7 @@ out:
 int load_module_path(const char *path, const char *args, void *__user reserved)
 {
     long err = 0;
-    logkfd("path: %s, args: %s\n", path, args);
+    logkfd("%s\n", path);
 
     struct file *filp = filp_open(path, O_RDONLY, 0);
     if (unlikely(IS_ERR(filp))) {
@@ -557,9 +561,13 @@ out:
     return err;
 }
 
-int control_module(const char *name, const char *ctl_args, void *__user reserved)
+int control_module(const char *name, const char *ctl_args, char *__user out_msg, int outlen)
 {
     if (!ctl_args) return -EINVAL;
+    int args_len = strlen(ctl_args);
+    if (args_len <= 0) return -EINVAL;
+
+    logkfi("name %s, args: %s\n", name, ctl_args);
 
     int err = 0;
     rcu_read_lock();
@@ -570,19 +578,21 @@ int control_module(const char *name, const char *ctl_args, void *__user reserved
         goto out;
     }
 
-    mod->ctl_args = vmalloc(strlen(ctl_args) + 1);
+    if (mod->ctl_args) {
+        kvfree(mod->ctl_args);
+    }
+
+    mod->ctl_args = vmalloc(args_len + 1);
     if (!mod->args) {
         err = -ENOMEM;
         goto out;
     }
 
-    if (mod->ctl_args) {
-        kvfree(mod->ctl_args);
-    }
-
     strcpy(mod->ctl_args, ctl_args);
 
-    err = (*mod->ctl)(ctl_args, reserved);
+    err = (*mod->ctl)(mod->ctl_args, out_msg, outlen);
+
+    logkfi("name: %s, rc: %d\n", name, err);
 
 out:
     rcu_read_unlock();

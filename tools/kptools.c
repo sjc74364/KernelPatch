@@ -53,7 +53,8 @@ void print_usage(char **argv)
         "  -o, --out PATH               Patched image path.\n"
 
         "  -E, --embed-kpm PATH         Embed KPM into patches.\n"
-        "  -D, --detach-kpm NAME        Detach embeded KPM from patches.\n"
+        "  -A, --embed-kpm-args ARGS    KPM args will be passed to previous KPM(-E).\n"
+        "  -D, --detach-kpm NAME        (not implemented) Detach embeded KPM from patches.\n"
         "  -M, --kpm PATH               Specify KPM path.\n"
         "\n";
     fprintf(stdout, c, version, program_name);
@@ -79,10 +80,11 @@ int main(int argc, char *argv[])
                                  { "out", required_argument, NULL, 'o' },
 
                                  { "embed-kpm", required_argument, NULL, 'E' },
+                                 { "embed-kpm-args", required_argument, NULL, 'A' },
                                  { "detach-kpm", required_argument, NULL, 'D' },
                                  { "kpm", required_argument, NULL, 'M' },
                                  { 0, 0, 0, 0 } };
-    char *optstr = "hvpurdli:s:k:o:E:D:M:";
+    char *optstr = "hvpurdli:s:k:o:E:A:D:M:";
 
     char *kimg_path = NULL;
     char *kpimg_path = NULL;
@@ -90,10 +92,11 @@ int main(int argc, char *argv[])
     char *superkey = NULL;
 
     int embed_kpm_num = 0;
-    char *embed_kpms_path[KPM_MAX_NUM] = { 0 };
+    char *embed_kpms_path[EXTRA_ITEM_MAX_NUM] = { 0 };
+    char *embed_kpms_args[EXTRA_ITEM_MAX_NUM] = { 0 };
 
     int detach_kpm_num = 0;
-    char *detach_kpms_name[KPM_MAX_NUM] = { 0 };
+    char *detach_kpms_name[EXTRA_ITEM_MAX_NUM] = { 0 };
 
     char *alone_kpm_path = NULL;
 
@@ -127,6 +130,9 @@ int main(int argc, char *argv[])
         case 'E':
             embed_kpms_path[embed_kpm_num++] = optarg;
             break;
+        case 'A':
+            embed_kpms_args[embed_kpm_num - 1] = optarg;
+            break;
         case 'D':
             detach_kpms_name[detach_kpm_num++] = optarg;
             break;
@@ -147,8 +153,8 @@ int main(int argc, char *argv[])
         else
             fprintf(stdout, "%x\n", version);
     } else if (cmd == 'p') {
-        ret = patch_update_img(kimg_path, kpimg_path, out_path, superkey, embed_kpms_path, embed_kpm_num,
-                               detach_kpms_name, detach_kpm_num);
+        ret = patch_update_img(kimg_path, kpimg_path, out_path, superkey, embed_kpms_path, embed_kpms_args,
+                               embed_kpm_num, detach_kpms_name, detach_kpm_num);
     } else if (cmd == 'd') {
         ret = dump_kallsym(kimg_path);
     } else if (cmd == 'u') {
@@ -156,7 +162,7 @@ int main(int argc, char *argv[])
     } else if (cmd == 'r') {
         ret = reset_key(kimg_path, out_path, superkey);
     } else if (cmd == 'l') {
-        if (kimg_path) print_patched_image_info(kimg_path);
+        if (kimg_path) print_image_patch_info(kimg_path);
         if (alone_kpm_path) print_kpm_info_path(alone_kpm_path);
         if (kpimg_path) print_kp_image_info(kpimg_path);
     }

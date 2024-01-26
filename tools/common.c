@@ -4,6 +4,7 @@
  */
 
 #include "common.h"
+#include "order.h"
 
 bool log_enable = false;
 
@@ -53,11 +54,51 @@ void read_file_align(const char *path, char **con, int *out_len, int align)
     *out_len = align_len;
 }
 
-void write_file(const char *path, char *img, int len)
+void write_file(const char *path, const char *con, int len, bool append)
 {
-    FILE *fout = fopen(path, "wb");
+    FILE *fout = fopen(path, append ? "a" : "w");
     if (!fout) tools_error_exit("open %s %s\n", path, strerror(errno));
-    int writelen = fwrite(img, 1, len, fout);
+    int writelen = fwrite(con, 1, len, fout);
     if (writelen != len) tools_error_exit("write file: %s incomplete\n", path);
     fclose(fout);
+}
+
+int64_t int_unpack(void *ptr, int32_t size, int32_t is_be)
+{
+    int16_t res16;
+    int32_t res32;
+    int64_t res64;
+    switch (size) {
+    case 8:
+        res64 = *(int64_t *)ptr;
+        return is_be ? i64be(res64) : i64le(res64);
+    case 4:
+        res32 = *(int32_t *)ptr;
+        return is_be ? i32be(res32) : i32le(res32);
+    case 2:
+        res16 = *(int16_t *)ptr;
+        return is_be ? i16be(res16) : i16le(res16);
+    default:
+        return *(int8_t *)ptr;
+    }
+}
+
+uint64_t uint_unpack(void *ptr, int32_t size, int32_t is_be)
+{
+    uint16_t res16;
+    uint32_t res32;
+    uint64_t res64;
+    switch (size) {
+    case 8:
+        res64 = *(uint64_t *)ptr;
+        return is_be ? u64be(res64) : u64le(res64);
+    case 4:
+        res32 = *(uint32_t *)ptr;
+        return is_be ? u32be(res32) : u32le(res32);
+    case 2:
+        res16 = *(uint16_t *)ptr;
+        return is_be ? u16be(res16) : u16le(res16);
+    default:
+        return *(uint8_t *)ptr;
+    }
 }
